@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/chickenzord/kube-annotate/config"
-	v1 "k8s.io/api/admission/v1"
+	admissionv1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,7 +42,7 @@ func init() {
 	_ = appsv1.AddToScheme(runtimeScheme)
 }
 
-func parseBody(r *http.Request) (*v1.AdmissionReview, error) {
+func parseBody(r *http.Request) (*admissionv1.AdmissionReview, error) {
 	if r.ContentLength == 0 {
 		return nil, errors.New("empty body")
 	}
@@ -56,7 +56,7 @@ func parseBody(r *http.Request) (*v1.AdmissionReview, error) {
 		return nil, fmt.Errorf("cannot read body: %v", err)
 	}
 
-	result := v1.AdmissionReview{}
+	result := admissionv1.AdmissionReview{}
 	if _, _, err := deserializer.Decode(data, nil, &result); err != nil {
 		return nil, fmt.Errorf("cannot deserialize data to AdmissionReview: %v", err)
 	}
@@ -64,8 +64,8 @@ func parseBody(r *http.Request) (*v1.AdmissionReview, error) {
 	return &result, nil
 }
 
-func respond(review *v1.AdmissionReview, response *v1.AdmissionResponse) *v1.AdmissionReview {
-	result := &v1.AdmissionReview{}
+func respond(review *admissionv1.AdmissionReview, response *admissionv1.AdmissionResponse) *admissionv1.AdmissionReview {
+	result := &admissionv1.AdmissionReview{}
 	if response != nil {
 		result.Response = response
 		if review.Request != nil {
@@ -75,31 +75,31 @@ func respond(review *v1.AdmissionReview, response *v1.AdmissionResponse) *v1.Adm
 	return result
 }
 
-func respondWithError(review *v1.AdmissionReview, err error) *v1.AdmissionReview {
-	return respond(review, &v1.AdmissionResponse{
+func respondWithError(review *admissionv1.AdmissionReview, err error) *admissionv1.AdmissionReview {
+	return respond(review, &admissionv1.AdmissionResponse{
 		Result: &metav1.Status{
 			Message: err.Error(),
 		},
 	})
 }
 
-func respondWithSkip(review *v1.AdmissionReview) *v1.AdmissionReview {
-	return respond(review, &v1.AdmissionResponse{
+func respondWithSkip(review *admissionv1.AdmissionReview) *admissionv1.AdmissionReview {
+	return respond(review, &admissionv1.AdmissionResponse{
 		Allowed: true,
 	})
 }
 
-func respondWithPatches(review *v1.AdmissionReview, patches []Patch) *v1.AdmissionReview {
+func respondWithPatches(review *admissionv1.AdmissionReview, patches []Patch) *admissionv1.AdmissionReview {
 	patchesBytes, err := json.Marshal(patches)
 	if err != nil {
 		return respondWithError(review, fmt.Errorf("cannot serialize patches: %v", err))
 	}
 
-	return respond(review, &v1.AdmissionResponse{
+	return respond(review, &admissionv1.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchesBytes,
-		PatchType: func() *v1.PatchType {
-			pt := v1.PatchTypeJSONPatch
+		PatchType: func() *admissionv1.PatchType {
+			pt := admissionv1.PatchTypeJSONPatch
 			return &pt
 		}(),
 	})
@@ -131,7 +131,7 @@ func createPatchFromAnnotations(base, extra map[string]string) Patch {
 	}
 }
 
-func mutate(review *v1.AdmissionReview) *v1.AdmissionReview {
+func mutate(review *admissionv1.AdmissionReview) *admissionv1.AdmissionReview {
 	//deserialize pod
 	var pod corev1.Pod
 	log.WithData(review).Debug("my log")
