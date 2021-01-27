@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"github.com/chickenzord/kube-annotate/config"
-	"k8s.io/api/admission/v1"
+	v1 "k8s.io/api/admission/v1"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -52,7 +52,6 @@ func parseBody(r *http.Request) (*v1.AdmissionReview, error) {
 	}
 
 	data, err := ioutil.ReadAll(r.Body)
-	log.WithData(data).Debug("my log - parse body")
 	if err != nil {
 		return nil, fmt.Errorf("cannot read body: %v", err)
 	}

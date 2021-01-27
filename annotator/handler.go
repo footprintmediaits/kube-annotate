@@ -10,7 +10,7 @@ import (
 
 //MutateHandler handles admission mutation
 func MutateHandler(w http.ResponseWriter, r *http.Request) {
-	logRequest(r)
+	// logRequest(r)
 
 	admissionReview, err := parseBody(r)
 	if err != nil {
