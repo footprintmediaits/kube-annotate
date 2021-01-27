@@ -38,10 +38,10 @@
   version = "1.2.0"
 
 [[constraint]]
-  branch = "release-1.12"
+  version = "kubernetes-1.18.15"
   name = "k8s.io/api"
 
-[[constraint]]
+[[override]]
   name = "github.com/gorilla/handlers"
   version = "1.4.0"
 
@@ -53,7 +53,7 @@
   branch = "master"
   name = "github.com/meatballhat/negroni-logrus"
 
-[[constraint]]
+[[override]]
   name = "gopkg.in/tylerb/graceful.v1"
   version = "1.2.15"
 

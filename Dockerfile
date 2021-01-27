@@ -1,4 +1,4 @@
-FROM golang:1.11.2-alpine AS builder
+FROM golang:1.15.2-alpine AS builder
 
 WORKDIR /go/src/github.com/chickenzord/kube-annotate
 RUN apk add -U --no-cache git curl wget make && \

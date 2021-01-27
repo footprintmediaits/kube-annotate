@@ -8,9 +8,9 @@ import (
 	"net/http"
 
 	"github.com/chickenzord/kube-annotate/config"
-	"k8s.io/api/admission/v1beta1"
-	admissionregistrationv1beta1 "k8s.io/api/admissionregistration/v1beta1"
-	v1 "k8s.io/api/apps/v1"
+	"k8s.io/api/admission/v1"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -36,13 +36,13 @@ var (
 
 func init() {
 	_ = corev1.AddToScheme(runtimeScheme)
-	_ = admissionregistrationv1beta1.AddToScheme(runtimeScheme)
+	_ = admissionregistrationv1.AddToScheme(runtimeScheme)
 	// defaulting with webhooks:
 	// https://github.com/kubernetes/kubernetes/issues/57982
-	_ = v1.AddToScheme(runtimeScheme)
+	_ = appsv1.AddToScheme(runtimeScheme)
 }
 
-func parseBody(r *http.Request) (*v1beta1.AdmissionReview, error) {
+func parseBody(r *http.Request) (*v1.AdmissionReview, error) {
 	if r.ContentLength == 0 {
 		return nil, errors.New("empty body")
 	}
@@ -52,11 +52,12 @@ func parseBody(r *http.Request) (*v1beta1.AdmissionReview, error) {
 	}
 
 	data, err := ioutil.ReadAll(r.Body)
+	log.WithData(data).Debug("my log - parse body")
 	if err != nil {
 		return nil, fmt.Errorf("cannot read body: %v", err)
 	}
 
-	result := v1beta1.AdmissionReview{}
+	result := v1.AdmissionReview{}
 	if _, _, err := deserializer.Decode(data, nil, &result); err != nil {
 		return nil, fmt.Errorf("cannot deserialize data to AdmissionReview: %v", err)
 	}
@@ -64,8 +65,8 @@ func parseBody(r *http.Request) (*v1beta1.AdmissionReview, error) {
 	return &result, nil
 }
 
-func respond(review *v1beta1.AdmissionReview, response *v1beta1.AdmissionResponse) *v1beta1.AdmissionReview {
-	result := &v1beta1.AdmissionReview{}
+func respond(review *v1.AdmissionReview, response *v1.AdmissionResponse) *v1.AdmissionReview {
+	result := &v1.AdmissionReview{}
 	if response != nil {
 		result.Response = response
 		if review.Request != nil {
@@ -75,31 +76,31 @@ func respond(review *v1beta1.AdmissionReview, response *v1beta1.AdmissionRespons
 	return result
 }
 
-func respondWithError(review *v1beta1.AdmissionReview, err error) *v1beta1.AdmissionReview {
-	return respond(review, &v1beta1.AdmissionResponse{
+func respondWithError(review *v1.AdmissionReview, err error) *v1.AdmissionReview {
+	return respond(review, &v1.AdmissionResponse{
 		Result: &metav1.Status{
 			Message: err.Error(),
 		},
 	})
 }
 
-func respondWithSkip(review *v1beta1.AdmissionReview) *v1beta1.AdmissionReview {
-	return respond(review, &v1beta1.AdmissionResponse{
+func respondWithSkip(review *v1.AdmissionReview) *v1.AdmissionReview {
+	return respond(review, &v1.AdmissionResponse{
 		Allowed: true,
 	})
 }
 
-func respondWithPatches(review *v1beta1.AdmissionReview, patches []Patch) *v1beta1.AdmissionReview {
+func respondWithPatches(review *v1.AdmissionReview, patches []Patch) *v1.AdmissionReview {
 	patchesBytes, err := json.Marshal(patches)
 	if err != nil {
 		return respondWithError(review, fmt.Errorf("cannot serialize patches: %v", err))
 	}
 
-	return respond(review, &v1beta1.AdmissionResponse{
+	return respond(review, &v1.AdmissionResponse{
 		Allowed: true,
 		Patch:   patchesBytes,
-		PatchType: func() *v1beta1.PatchType {
-			pt := v1beta1.PatchTypeJSONPatch
+		PatchType: func() *v1.PatchType {
+			pt := v1.PatchTypeJSONPatch
 			return &pt
 		}(),
 	})
@@ -131,10 +132,11 @@ func createPatchFromAnnotations(base, extra map[string]string) Patch {
 	}
 }
 
-func mutate(review *v1beta1.AdmissionReview) *v1beta1.AdmissionReview {
+func mutate(review *v1.AdmissionReview) *v1.AdmissionReview {
 	//deserialize pod
 	var pod corev1.Pod
-	if err := json.Unmarshal(review.Request.Object.Raw, &pod); err != nil {
+	log.WithData(review).Debug("my log")
+	if _, _, err := deserializer.Decode(review.Request.Object.Raw, nil, &pod); err != nil {
 		log.WithData(review).WithError(err).Errorf("error mutating pod")
 		return respondWithError(review, errors.New("cannot deserialize pod from AdmissionRequest"))
 	}
