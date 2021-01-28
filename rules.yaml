@@ -1,0 +1,5 @@
+- selector:
+    longhorn.io/component=instance-manager
+    longhorn.io/instance-manager-type=engine
+  annotations:
+    cluster-autoscaler.kubernetes.io/safe-to-evict: true

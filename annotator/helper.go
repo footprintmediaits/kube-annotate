@@ -2,28 +2,28 @@ package annotator
 
 import (
 	"encoding/json"
+	"io"
 	"io/ioutil"
-	"net/http"
 )
 
-func logRequest(r *http.Request) {
-	if r.Body == nil {
+func logRequest(sr io.Reader) {
+	if sr == nil {
 		return
 	}
 
-	body, _ := ioutil.ReadAll(r.Body)
+	body, _ := ioutil.ReadAll(sr)
 
 	obj := make(map[string]interface{})
 	if err := json.Unmarshal(body, &obj); err == nil {
-		log.WithData(obj).Debugf("%s: %s", r.Method, r.RequestURI)
+		log.WithData(obj)
 		return
 	}
 
 	arr := make([]interface{}, 0)
 	if err := json.Unmarshal(body, &arr); err == nil {
-		log.WithData(arr).Debugf("%s: %s", r.Method, r.RequestURI)
+		log.WithData(arr)
 		return
 	}
 
-	log.WithData(string(body)).Debugf("%s: %s", r.Method, r.RequestURI)
+	log.WithData(string(body))
 }
